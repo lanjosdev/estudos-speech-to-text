@@ -30,6 +30,8 @@ export default function App() {
   const [mediaRecorder, setMediaRecorder] = useState(null);
   const [transcription, setTranscription] = useState('');
 
+  const keywords = ['teste de som', 'buscar por'];
+
   // Função de limpeza para interromper a gravação e liberar recursos de mídia
   useEffect(() => {
     return ()=> {
@@ -57,9 +59,9 @@ export default function App() {
 
         // chama função que converte o dado da gravação local
         const base64Audio = await audioBlobToBase64(audioBlob); // Esse await não trata excessao (sem try)
-        //console.log('Base64 audio:', base64Audio);
+        // console.log('Base64 audio:', base64Audio);
 
-        // ENVIANDO DADO DE GRAVAÇÃO PARA API GCP:
+        // ENVIANDO DADO DE GRAVAÇÃO PARA API SPEECH-TO-TEXT:
         try {
           const startTime = performance.now();
 
@@ -79,11 +81,29 @@ export default function App() {
 
           const endTime = performance.now();
           const elapsedTime = endTime - startTime;
+          console.log('API response:', response);
           console.log('Tempo do retorno da API (ms):', elapsedTime);
 
-          // Imprimi o resultado (transcrição):
+          // Verificar o resultado (transcrição):
           if(response.data.results && response.data.results.length > 0) {
-            setTranscription(response.data.results[0].alternatives[0].transcript);
+            let transcricoesSalvas = transcription;
+            let transcricaoAtual = response.data.results[0].alternatives[0].transcript;
+            console.log(transcricaoAtual);
+
+            // Verificação de frases chaves:
+            for(let element of keywords) {
+              //pode ser por .match(/element/)?
+              if(transcricaoAtual.includes(element)) {
+                alert('PAREEE');
+                console.log('sai da function');
+                return;
+              }
+              console.log('mais um for')
+            }
+
+            // Salva na state:
+            transcricoesSalvas += transcricaoAtual + ", ";
+            setTranscription(transcricoesSalvas);
           } else {
             console.log('Nenhum resultado de transcrição na resposta da API:', response.data);
             setTranscription('Nenhuma transcrição disponível');
@@ -92,15 +112,13 @@ export default function App() {
           console.error('Erro com a API do Google Speech-to-Text:', error.response.data);
         }
       });
-
-      // setMediaRecorder(recorder);
     } catch (error) {
       console.error('Erro ao obter mídia do usuário', error);
     }
   }
 
   function stopRecording() {
-    //Se está durante a gravação local, então:
+    //Se está durante a gravação local, então...
     if(mediaRecorder) { 
       mediaRecorder.stop(); //Termina a gravação de voz
       console.log('Recording stopped');
@@ -114,9 +132,9 @@ export default function App() {
       <h1>Teste de API (Cloud Speech-to-Text)</h1>
 
       {!recording ? (
-        <button onClick={startRecording}>Iniciar gravação</button>
+        <button onClick={startRecording}>Ativa microfone</button>
       ) : (
-        <button onClick={stopRecording}>Terminar gravação</button>
+        <button onClick={stopRecording}>Desativa microfone</button>
       )}
 
       <p>Transcrição: {transcription}</p>
